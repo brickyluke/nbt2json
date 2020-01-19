@@ -46,7 +46,9 @@ func Json2Nbt(b []byte, byteOrder binary.ByteOrder) ([]byte, error) {
 	var nbtTag interface{}
 	var nbtArray []interface{}
 	var err error
-	err = json.Unmarshal(b, &nbtJsonData)
+	d := json.NewDecoder(bytes.NewBuffer(b))
+	d.UseNumber() // keep number precision: float64, which is used by default cannot hold an int64
+	err = d.Decode(&nbtJsonData)
 	if err != nil {
 		return nil, JsonParseError{"Error parsing JSON input. Is input JSON-formatted?", err}
 	}
@@ -54,7 +56,9 @@ func Json2Nbt(b []byte, byteOrder binary.ByteOrder) ([]byte, error) {
 	if err != nil {
 		return nil, JsonParseError{"Error marshalling nbt: json.RawMessage", err}
 	}
-	err = json.Unmarshal(temp, &nbtArray)
+	d1 := json.NewDecoder(bytes.NewBuffer(temp))
+	d1.UseNumber()
+	err = d1.Decode(&nbtArray)
 	if err != nil {
 		return nil, JsonParseError{"Error unmarshalling nbt: value", err}
 	}
@@ -71,14 +75,16 @@ func Json2Nbt(b []byte, byteOrder binary.ByteOrder) ([]byte, error) {
 func writeTag(w io.Writer, byteOrder binary.ByteOrder, myMap interface{}) error {
 	var err error
 	if m, ok := myMap.(map[string]interface{}); ok {
-		if tagType, ok := m["tagType"].(float64); ok {
+		i64, err := m["tagType"].(json.Number).Int64()
+		tagType := byte(i64)
+		if err == nil {
 			if tagType == 0 {
 				// not expecting a 0 tag, but if it occurs just ignore it
 				return nil
 			}
 			err = binary.Write(w, byteOrder, byte(tagType))
 			if err != nil {
-				return JsonParseError{"Error writing tagType" + string(byte(tagType)), err}
+				return JsonParseError{"Error writing tagType" + string(tagType), err}
 			}
 			if name, ok := m["name"].(string); ok {
 				err = binary.Write(w, byteOrder, int16(len(name)))
@@ -106,12 +112,13 @@ func writeTag(w io.Writer, byteOrder binary.ByteOrder, myMap interface{}) error 
 	return err
 }
 
-func writePayload(w io.Writer, byteOrder binary.ByteOrder, m map[string]interface{}, tagType float64) error {
+func writePayload(w io.Writer, byteOrder binary.ByteOrder, m map[string]interface{}, tagType byte) error {
 	var err error
 
-	switch int(tagType) {
-	case 1:
-		if i, ok := m["value"].(float64); ok {
+	switch tagType {
+	case 1: // TAG_Byte
+		i, err := m["value"].(json.Number).Int64()
+		if err == nil {
 			err = binary.Write(w, byteOrder, int8(i))
 			if err != nil {
 				return JsonParseError{"Error writing byte payload", err}
@@ -119,77 +126,83 @@ func writePayload(w io.Writer, byteOrder binary.ByteOrder, m map[string]interfac
 		} else {
 			return JsonParseError{"Tag Byte value field not a number", err}
 		}
-	case 2:
-		if i, ok := m["value"].(float64); ok {
+	case 2: // TAG_Short
+		i, err := m["value"].(json.Number).Int64()
+		if err == nil {
 			err = binary.Write(w, byteOrder, int16(i))
 			if err != nil {
 				return JsonParseError{"Error writing short payload", err}
 			}
 		} else {
-			return JsonParseError{"Tag Byte value field not a number", err}
+			return JsonParseError{"Tag Short value field not a number", err}
 		}
-	case 3:
-		if i, ok := m["value"].(float64); ok {
+	case 3: // TAG_Int
+		i, err := m["value"].(json.Number).Int64()
+		if err == nil {
 			err = binary.Write(w, byteOrder, int32(i))
 			if err != nil {
 				return JsonParseError{"Error writing int32 payload", err}
 			}
 		} else {
-			return JsonParseError{"Tag Byte value field not a number", err}
+			return JsonParseError{"Tag Int value field not a number", err}
 		}
-	case 4:
-		if i, ok := m["value"].(float64); ok {
+	case 4: // TAG_Long
+		i, err := m["value"].(json.Number).Int64()
+		if err == nil {
 			err = binary.Write(w, byteOrder, int64(i))
 			if err != nil {
 				return JsonParseError{"Error writing int64 payload", err}
 			}
 		} else {
-			return JsonParseError{"Tag Byte value field not a number", err}
+			return JsonParseError{"Tag Long value field not a number", err}
 		}
-	case 5:
-		if f, ok := m["value"].(float64); ok {
+	case 5: // TAG_Float
+		f, err := m["value"].(json.Number).Float64()
+		if err == nil {
 			err = binary.Write(w, byteOrder, float32(f))
 			if err != nil {
 				return JsonParseError{"Error writing float32 payload", err}
 			}
 		} else {
-			return JsonParseError{"Tag Byte value field not a number", err}
+			return JsonParseError{"Tag Float - Value field not a number", err}
 		}
-	case 6:
-		if f, ok := m["value"].(float64); ok {
+	case 6: // TAG_Double
+		f, err := m["value"].(json.Number).Float64()
+		if err == nil {
 			err = binary.Write(w, byteOrder, f)
 			if err != nil {
-				return JsonParseError{"Error writing float64 payload", err}
+				return JsonParseError{"Tag Double - Error writing float64 payload", err}
 			}
 		} else {
 			// return JsonParseError{"Tag Byte value field not a number", err}
 			f = math.NaN()
 			err = binary.Write(w, byteOrder, f)
 			if err != nil {
-				return JsonParseError{"Error writing float64 payload", err}
+				return JsonParseError{"Tag Double - Error writing float64 payload", err}
 			}
 
 		}
-	case 7:
+	case 7: // TAG_Byte_Array
 		if values, ok := m["value"].([]interface{}); ok {
 			err = binary.Write(w, byteOrder, int32(len(values)))
 			if err != nil {
 				return JsonParseError{"Error writing byte array length", err}
 			}
 			for _, value := range values {
-				if i, ok := value.(float64); ok {
+				i, err := value.(json.Number).Int64()
+				if err == nil {
 					err = binary.Write(w, byteOrder, int8(i))
 					if err != nil {
 						return JsonParseError{"Error writing element of byte array", err}
 					}
 				} else {
-					return JsonParseError{"Tag Byte value field not a number", err}
+					return JsonParseError{"Tag Byte Array - Tag Byte value field not a number", err}
 				}
 			}
 		} else {
 			return JsonParseError{"Tag Byte Array value field not an array", err}
 		}
-	case 8:
+	case 8: // TAG_String
 		if s, ok := m["value"].(string); ok {
 			err = binary.Write(w, byteOrder, int16(len([]byte(s))))
 			if err != nil {
@@ -202,12 +215,14 @@ func writePayload(w io.Writer, byteOrder binary.ByteOrder, m map[string]interfac
 		} else {
 			return JsonParseError{"Tag String value field not a number", err}
 		}
-	case 9:
+	case 9: // TAG_List
 		// important: tagListType needs to be in scope to be passed to writePayload
 		// := were keeping it in a lower scope and zeroing it out.
-		var tagListType float64
+		var tagListType byte
 		if listMap, ok := m["value"].(map[string]interface{}); ok {
-			if tagListType, ok = listMap["tagListType"].(float64); ok {
+			i64, err := listMap["tagListType"].(json.Number).Int64()
+			tagListType = byte(i64)
+			if err == nil {
 				err = binary.Write(w, byteOrder, byte(tagListType))
 				if err != nil {
 					return JsonParseError{"While writing tag list type", err}
@@ -240,7 +255,7 @@ func writePayload(w io.Writer, byteOrder binary.ByteOrder, m map[string]interfac
 		} else {
 			return JsonParseError{"Tag List value field not an object", err}
 		}
-	case 10:
+	case 10: // TAG_Compound
 		if values, ok := m["value"].([]interface{}); ok {
 			for _, value := range values {
 				err = writeTag(w, byteOrder, value)
@@ -256,7 +271,7 @@ func writePayload(w io.Writer, byteOrder binary.ByteOrder, m map[string]interfac
 		} else {
 			return JsonParseError{"Tag Compound value field not an array", err}
 		}
-	case 11:
+	case 11: // TAG_Int_Array
 		if values, ok := m["value"].([]interface{}); ok {
 			err = binary.Write(w, byteOrder, int32(len(values)))
 			if err != nil {
@@ -275,7 +290,7 @@ func writePayload(w io.Writer, byteOrder binary.ByteOrder, m map[string]interfac
 		} else {
 			return JsonParseError{"Tag Int Array value field not an array", err}
 		}
-	case 12:
+	case 12: // TAG_Long_Array
 		if values, ok := m["value"].([]interface{}); ok {
 			err = binary.Write(w, byteOrder, int64(len(values)))
 			if err != nil {
@@ -294,8 +309,8 @@ func writePayload(w io.Writer, byteOrder binary.ByteOrder, m map[string]interfac
 		} else {
 			return JsonParseError{"Tag Int Array value field not an array", err}
 		}
-	default:
-		return JsonParseError{"tagType " + strconv.Itoa(int(tagType)) + " is not recognized", err}
+	default: // 0 = TAG_End
+		return JsonParseError{"tagType " + string(tagType) + " is not recognized", err}
 	}
 	return err
 }
