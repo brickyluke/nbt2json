@@ -18,15 +18,19 @@ func main() {
 	var skipBytes int
 	app := cli.NewApp()
 	app.Name = "NBT to JSON"
-	app.Version = "0.3.0"
+	app.Version = "0.4.0"
 	app.Authors = []cli.Author{
 		{
 			Name:  "Jim Nelson",
 			Email: "jim@jimnelson.us",
 		},
+		{
+			Name:  "Lukas Ziegler",
+			Email: "lukas@brickyluke.org",
+		},
 	}
-	app.Copyright = "(c) 2018, 2019 Jim Nelson"
-	app.Usage = "Converts NBT-encoded data to JSON | https://github.com/midnightfreddie/nbt2json"
+	app.Copyright = "(c) 2018, 2019 Jim Nelson, 2020 Lukas Ziegler"
+	app.Usage = "Converts NBT-encoded data to JSON | https://github.com/brickyluke/nbt2json"
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "reverse, json2nbt, r",

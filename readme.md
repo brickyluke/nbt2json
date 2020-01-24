@@ -2,6 +2,11 @@
 
 A command line utility and module that reads NBT data and converts it to JSON or YAML for editing and then back to NBT.
 
+This is a fork of [Jim Nelson's nbt2json code](https://github.com/midnightfreddie/nbt2json).
+It improves parsing accuracy for large integer values such as the world seed.
+
+Most credit should go to Jim Nelson who wrote the vast majority of this code.
+
 ## Features
 
 - Command line utility will auto-detect and decompress gzipped files
