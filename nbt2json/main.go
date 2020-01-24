@@ -2,15 +2,13 @@ package main
 
 import (
 	"bytes"
+	"encoding/binary"
 	"io/ioutil"
 	"os"
-	"time"
-
-	"encoding/binary"
 
 	"compress/gzip"
 
-	"github.com/midnightfreddie/nbt2json"
+	"github.com/brickyluke/nbt2json"
 	"github.com/urfave/cli"
 )
 
@@ -21,9 +19,8 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "NBT to JSON"
 	app.Version = "0.3.0"
-	app.Compiled = time.Now()
 	app.Authors = []cli.Author{
-		cli.Author{
+		{
 			Name:  "Jim Nelson",
 			Email: "jim@jimnelson.us",
 		},
@@ -146,5 +143,5 @@ func main() {
 		return nil
 	}
 
-	app.Run(os.Args)
+	_ = app.Run(os.Args)
 }
