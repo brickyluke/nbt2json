@@ -132,42 +132,42 @@ func getPayload(r *bytes.Reader, byteOrder binary.ByteOrder, tagType byte) (inte
 	switch tagType {
 	case 0:
 		// end tag for compound; do nothing further
-	case 1:
+	case 1: // TAG_Byte
 		var i int8
 		err = binary.Read(r, byteOrder, &i)
 		if err != nil {
 			return nil, NbtParseError{"Reading int8", err}
 		}
 		output = i
-	case 2:
+	case 2: // TAG_Short
 		var i int16
 		err = binary.Read(r, byteOrder, &i)
 		if err != nil {
 			return nil, NbtParseError{"Reading int16", err}
 		}
 		output = i
-	case 3:
+	case 3: // TAG_Int
 		var i int32
 		err = binary.Read(r, byteOrder, &i)
 		if err != nil {
 			return nil, NbtParseError{"Reading int32", err}
 		}
 		output = i
-	case 4:
+	case 4: // TAG_Long
 		var i int64
 		err = binary.Read(r, byteOrder, &i)
 		if err != nil {
 			return nil, NbtParseError{"Reading int64", err}
 		}
 		output = i
-	case 5:
+	case 5: // TAG_Float
 		var f float32
 		err = binary.Read(r, byteOrder, &f)
 		if err != nil {
 			return nil, NbtParseError{"Reading float32", err}
 		}
 		output = f
-	case 6:
+	case 6: // TAG_Double
 		var f float64
 		err = binary.Read(r, byteOrder, &f)
 		if err != nil {
@@ -178,7 +178,7 @@ func getPayload(r *bytes.Reader, byteOrder binary.ByteOrder, tagType byte) (inte
 		} else {
 			output = f
 		}
-	case 7:
+	case 7: // TAG_Byte_Array
 		var byteArray []int8
 		var oneByte int8
 		var numRecords int32
@@ -194,7 +194,7 @@ func getPayload(r *bytes.Reader, byteOrder binary.ByteOrder, tagType byte) (inte
 			byteArray = append(byteArray, oneByte)
 		}
 		output = byteArray
-	case 8:
+	case 8: // TAG_String
 		var strLen int16
 		err := binary.Read(r, byteOrder, &strLen)
 		if err != nil {
@@ -206,7 +206,7 @@ func getPayload(r *bytes.Reader, byteOrder binary.ByteOrder, tagType byte) (inte
 			return nil, NbtParseError{"Reading string tag data", err}
 		}
 		output = string(utf8String[:])
-	case 9:
+	case 9: // TAG_List
 		var tagList NbtTagList
 		err = binary.Read(r, byteOrder, &tagList.TagListType)
 		if err != nil {
@@ -225,7 +225,7 @@ func getPayload(r *bytes.Reader, byteOrder binary.ByteOrder, tagType byte) (inte
 			tagList.List = append(tagList.List, payload)
 		}
 		output = tagList
-	case 10:
+	case 10: // TAG_Compound
 		var compound []json.RawMessage
 		var tagType byte
 		for err = binary.Read(r, byteOrder, &tagType); tagType != 0; err = binary.Read(r, byteOrder, &tagType) {
@@ -243,7 +243,7 @@ func getPayload(r *bytes.Reader, byteOrder binary.ByteOrder, tagType byte) (inte
 			compound = append(compound, json.RawMessage(string(tag)))
 		}
 		output = compound
-	case 11:
+	case 11: // TAG_Int_Array
 		var intArray []int32
 		var numRecords, oneInt int32
 		err := binary.Read(r, byteOrder, &numRecords)
@@ -258,7 +258,7 @@ func getPayload(r *bytes.Reader, byteOrder binary.ByteOrder, tagType byte) (inte
 			intArray = append(intArray, oneInt)
 		}
 		output = intArray
-	case 12:
+	case 12: // TAG_Long_Array
 		var longArray []int64
 		var numRecords, oneInt int64
 		err := binary.Read(r, byteOrder, &numRecords)
